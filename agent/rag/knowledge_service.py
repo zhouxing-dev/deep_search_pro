@@ -9,6 +9,7 @@ from langchain_community.document_loaders import PyMuPDFLoader, Docx2txtLoader, 
     DirectoryLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from clients.embedding_client_manager import embedding_client_manager
 from clients.qdrant_client_manager import qdrant_client_manager
 from repositories.qdrant_repository import QdrantRepository
@@ -26,7 +27,6 @@ def load_document():
     supported_extensions = [".docx", ".pdf", ".xlsx",'.txt']
     all_documents=[]
     md5_set=set()
-
     if not os.path.exists(md5_file_path):
         with open(md5_file_path,'w',encoding='utf-8'):
             pass
@@ -115,9 +115,11 @@ def split_document(documents:List[Document]):
 def _save_md5(md5_value_list):
     """
     保存md5
-    :param md5_value:
+    :param md5_value_list:
     :return:
     """
+    if not md5_value_list:
+        return
     try:
         with open(base_path/'md5.txt','a',encoding='utf-8') as f:
             f.write('\n'.join(md5_value_list)+'\n')
@@ -128,14 +130,14 @@ def _save_md5(md5_value_list):
 async def upload_file():
     """
     知识库向量化
-    :return:
+    :return: 向量化结果统计信息（新增文档数、切片数）
     """
     embedding_client_manager.init()
     qdrant_client_manager.init()
     documents=load_document()
     if len(documents)==0:
         print("没有需要上传的文档")
-        return
+        return {"new_documents": 0, "chunks": 0, "message": "没有需要上传的文档"}
     #分割文档
     splits=split_document(documents)
     # 分割后的文档向量化
@@ -145,7 +147,7 @@ async def upload_file():
     for i in range(0,len(embedding_texts),2):
         batch_embedding_texts=embedding_texts[i:i+2]
         if batch_embedding_texts:
-            max_len = max(len(str(text)) for text in embedding_texts)
+            max_len = max(len(str(text)) for text in batch_embedding_texts)
             print(f"当前送入向量的最大文本长度: {max_len} 字符")
         batch_embeddings=await embedding_client_manager.client.aembed_documents(batch_embedding_texts)
         embeddings.extend(batch_embeddings)
@@ -154,6 +156,8 @@ async def upload_file():
     qdrant=QdrantRepository(qdrant_client_manager.client)
     await qdrant.ensure_collection()
     await qdrant.upsert(ids=ids,embeddings=embeddings,payloads=payloads)
+    print(f"知识库向量化完成：新增文档 {len(documents)} 个，写入切片 {len(splits)} 个")
+    return {"new_documents": len(documents), "chunks": len(splits), "message": "知识库向量化完成"}
 
 if __name__ == '__main__':
     asyncio.run(upload_file())

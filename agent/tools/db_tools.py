@@ -9,7 +9,7 @@ from api.monitor import monitor
 from clients.mysql_client_manager import db_client_manager
 from repositories.mysql_repository import MysqlRepository
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 
