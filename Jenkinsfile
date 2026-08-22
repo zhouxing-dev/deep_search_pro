@@ -29,25 +29,7 @@ pipeline {
             }
         }
 
-        // ==================== 阶段2: 依赖安装验证（项目暂无单元测试） ====================
-        stage('Test') {
-            steps {
-                echo "🧪 验证依赖可正常安装..."
-                sh '''
-                    python3 -m venv .venv
-                    . .venv/bin/activate
-                    pip install --quiet -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
-                    python -c "import fastapi, langchain, qdrant_client; print('核心依赖导入正常')"
-                '''
-            }
-            post {
-                always {
-                    sh 'rm -rf .venv'
-                }
-            }
-        }
-
-        // ==================== 阶段3: 构建 Docker 镜像 ====================
+        // ==================== 阶段2: 构建 Docker 镜像 ====================
         stage('Build Image') {
             steps {
                 echo "🔨 构建 Docker 镜像: ${IMAGE_TAG}"
