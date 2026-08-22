@@ -153,7 +153,7 @@ pipeline {
         failure {
             echo "❌ 构建失败！请检查日志。"
             sh """
-                if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+                if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
                     echo "=== 容器日志 ==="
                     docker logs ${CONTAINER_NAME} --tail 30
                 fi
